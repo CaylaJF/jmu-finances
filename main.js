@@ -23,7 +23,124 @@ const sankey = d3Sankey.sankey()
 
 
 async function init() {
-  const data = await d3.json("data/jmu.json");
+  // const data = await d3.json("data/data_sankey.json");
+  const jmuData = await d3.json("data/jmu.json");
+  const data = function forDiagram3(jmuData) {
+    const relevantData = jmuData.filter(d => d.category === "income" || d.category === "expense");
+    const nodes = getNodes(relevantData);
+    const links = getLinks(relevantData, nodes);
+    
+    return { nodes, links };
+  }
+
+
+  function getNodesCol1(data) {
+    return data
+      .filter(d => d.category === "income")
+      .map(d => ({ name: d.item, title: d.item }));
+  }
+  
+  function getNodesCol2(data) {
+    const categories = [...new Set(data.filter(d => d.category === "income").map(d => d.type))];
+    return categories.map(category => ({ name: category, title: category }));
+  }
+  
+  function getNodesCol3(data) {
+    return [{ name: "JMU", title: "JMU" }];
+  }
+  
+  function getNodesCol4(data) {
+    const categories = [...new Set(data.filter(d => d.category === "expense").map(d => d.type))];
+    return categories.map(category => ({ name: category, title: category }));
+  }
+  
+  function getNodesCol5(data) {
+    return data
+      .filter(d => d.category === "expense")
+      .map(d => ({ name: d.item, title: d.item }));
+  }
+  
+  function getNodes(data) {
+    return [
+      ...getNodesCol1(data),
+      ...getNodesCol2(data),
+      ...getNodesCol3(data),
+      ...getNodesCol4(data),
+      ...getNodesCol5(data)
+    ];
+  }
+  
+  function getLinksCol1Col2(data, nodes) {
+    return data
+      .filter(d => d.category === "income")
+      .map(d => ({
+        source: d.item,
+        target: d.type,
+        value: d.amount
+      }));
+  }
+  
+  function getLinksCol2Col3(data, nodes) {
+    const categories = [...new Set(data.filter(d => d.category === "income").map(d => d.type))];
+    return categories.map(type => ({
+      source: type,
+      target: "JMU",
+      value: data.filter(d => d.type === type).reduce((sum, d) => sum + d.amount, 0)
+    }));
+  }
+  
+  function getLinksCol3Col4(data, nodes) {
+    const links = [];
+    const jmuNode = nodes.find(node => node.name === "JMU");
+
+    if (jmuNode) {
+      data
+        .filter(d => d.category === "expense")
+        .forEach(d => {
+          links.push({
+            source: "JMU",
+            target: d.type,
+            value: d.amount
+          });
+        });
+    }
+
+    return links;
+  }
+  
+  function getLinksCol4Col5(data, nodes) {
+    return data
+      .filter(d => d.category === "expense")
+      .map(d => ({
+        source: d.type,
+        target: d.item,
+        value: d.amount
+      }));
+  }
+  
+  function getLinks(data, nodes) {
+    return [
+      ...getLinksCol1Col2(data, nodes),
+      ...getLinksCol2Col3(data, nodes),
+      ...getLinksCol3Col4(data, nodes),
+      ...getLinksCol4Col5(data, nodes)
+    ];
+  }
+
+function getLinks(relevantData) {
+  return relevantData.map((item) => {
+    const source = item.type;
+    const target = item.name;
+    const value = item["2023"];
+
+    return {
+      source,
+      target,
+      value,
+    };
+  });
+}
+
   // Applies it to the data. We make a copy of the nodes and links objects
   // so as to avoid mutating the original.
   const { nodes, links } = sankey({
